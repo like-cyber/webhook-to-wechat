@@ -70,13 +70,22 @@ function sendWeixinMessage(text) {
 }
 
 function extractMessage(body) {
+  // 如果是纯文本字符串（腾讯文档 raw 模式可能发纯文本）
   if (typeof body === "string") {
-    try { body = JSON.parse(body); } catch { return body; }
+    const trimmed = body.trim();
+    // 尝试解析为 JSON
+    try { body = JSON.parse(trimmed); } catch {
+      // 不是 JSON，就当纯文本用
+      return trimmed;
+    }
   }
+  // 如果 body 不是对象（比如数字、布尔），直接转字符串
+  if (typeof body !== "object" || body === null) return String(body);
+  // 优先取常见字段
   if (body.message) return String(body.message);
   if (body.text) return String(body.text);
   if (body.content) return String(body.content);
-  if (body.msg) return String(body.msg);
+  if (body.msg && typeof body.msg === "string") return body.msg;
   if (body.data) {
     if (typeof body.data === "string") return body.data;
     return formatRecord(body.data);
