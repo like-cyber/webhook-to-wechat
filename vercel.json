@@ -3,10 +3,20 @@
   "functions": {
     "api/webhook.js": {
       "maxDuration": 30
+    },
+    "api/keepalive.js": {
+      "maxDuration": 15
     }
   },
+  "crons": [
+    {
+      "path": "/api/keepalive",
+      "schedule": "*/5 * * * *"
+    }
+  ],
   "rewrites": [
     { "source": "/webhook", "destination": "/api/webhook" },
+    { "source": "/keepalive", "destination": "/api/keepalive" },
     { "source": "/", "destination": "/api/webhook" }
   ]
 }
