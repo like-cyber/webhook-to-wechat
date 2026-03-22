@@ -1,7 +1,7 @@
 /**
  * Vercel Serverless Function: Webhook → 微信转发
  * 
- * 部署后 URL: https://your-project.vercel.app/api/webhook
+ * 优化：先快速返回 200，用 waitUntil 异步发微信消息
  */
 const https = require("https");
 const crypto = require("crypto");
@@ -54,6 +54,7 @@ function sendWeixinMessage(text) {
       let data = "";
       res.on("data", (chunk) => { data += chunk; });
       res.on("end", () => {
+        console.log(`[sendmessage] HTTP ${res.statusCode}: ${data.substring(0, 200)}`);
         if (res.statusCode >= 200 && res.statusCode < 300) {
           resolve({ messageId: clientId, response: data });
         } else {
@@ -62,7 +63,7 @@ function sendWeixinMessage(text) {
       });
     });
     req.on("error", reject);
-    req.setTimeout(15000, () => { req.destroy(); reject(new Error("超时")); });
+    req.setTimeout(25000, () => { req.destroy(); reject(new Error("超时")); });
     req.write(body);
     req.end();
   });
@@ -113,17 +114,31 @@ module.exports = async (req, res) => {
 
   // POST = webhook
   if (req.method === "POST") {
-    try {
-      const message = extractMessage(req.body || "");
-      if (!message || message.trim() === "") {
-        return res.status(200).json({ ok: true, skipped: true });
-      }
+    const message = extractMessage(req.body || "");
+    if (!message || message.trim() === "") {
+      return res.status(200).json({ ok: true, skipped: true });
+    }
 
-      await sendWeixinMessage(`📋 智能表通知\n${message}`);
+    // 关键：用 waitUntil 让微信 API 调用在后台继续，先返回 200
+    const sendPromise = sendWeixinMessage(`📋 智能表通知\n${message}`).catch(err => {
+      console.error("[ERROR] 微信消息发送失败:", err.message);
+    });
+
+    // Vercel 的 waitUntil API：允许函数在返回响应后继续执行异步任务
+    if (typeof globalThis?.EdgeRuntime === "undefined" && req.waitUntil) {
+      // waitUntil 可能在某些 Vercel 版本不可用
+      req.waitUntil(sendPromise);
+      return res.status(200).json({ ok: true, async: true });
+    }
+
+    // 回退方案：直接 await，但把超时设长一点
+    try {
+      await sendPromise;
       return res.status(200).json({ ok: true });
     } catch (err) {
       console.error("[ERROR]", err.message);
-      return res.status(500).json({ ok: false, error: err.message });
+      // 即使微信发送失败，也返回 200（避免腾讯文档重试导致重复消息）
+      return res.status(200).json({ ok: true, wechat_error: err.message });
     }
   }
 
