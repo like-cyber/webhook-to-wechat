@@ -1,4 +1,10 @@
 {
+  "regions": ["hkg"],
+  "functions": {
+    "api/webhook.js": {
+      "maxDuration": 30
+    }
+  },
   "rewrites": [
     { "source": "/webhook", "destination": "/api/webhook" },
     { "source": "/", "destination": "/api/webhook" }
