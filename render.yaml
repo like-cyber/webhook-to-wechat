@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: webhook-to-wechat
+    runtime: node
+    plan: free
+    buildCommand: echo "No build needed"
+    startCommand: node server-cloud.js
+    envVars:
+      - key: WEIXIN_API_BASE_URL
+        sync: false
+      - key: WEIXIN_BOT_TOKEN
+        sync: false
+      - key: WEIXIN_USER_ID
+        sync: false
+      - key: CHANNEL_VERSION
+        value: "1.0.2"

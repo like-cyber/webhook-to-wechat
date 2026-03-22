@@ -1,0 +1,12 @@
+{
+  "name": "webhook-to-wechat",
+  "version": "1.0.0",
+  "description": "腾讯文档智能表 Webhook → 微信消息转发",
+  "main": "server-cloud.js",
+  "scripts": {
+    "start": "node server-cloud.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
